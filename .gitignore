@@ -1,0 +1,10 @@
+dataset/
+wbc_env/
+__pycache__/
+logs/
+*.pyc
+*.npy
+*.pkl
+*.h5
+.vscode/
+.ipynb_checkpoints/
