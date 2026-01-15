@@ -6,3 +6,8 @@ seaborn
 tensorflow
 torch
 tensorflow
+transformers
+opencv-python
+albumentations
+tqdm
+torchvision

@@ -26,6 +26,8 @@ from tqdm import tqdm
 import warnings
 warnings.filterwarnings('ignore')
 
+torch.cuda.empty_cache()
+
 # --------------------------
 # 1. Helpers & Original DinoBloom
 # --------------------------
@@ -85,7 +87,7 @@ set_seed(42)
 # --------------------------
 class Config:
     # Paths
-    data_root = "/data/data/WBCBench/wbc-bench-2026"
+    data_root = "/home/lab/Music/WBCBench2026/dataset"
     phase1_csv = "phase1_label.csv"
     train_csv = "phase2_train.csv"
     eval_csv = "phase2_eval.csv"
@@ -116,7 +118,7 @@ class Config:
     # Image Size
     image_size = 560  
     
-    batch_size = 8  # Adjusted for 384 resolution
+    batch_size = 4 # Adjusted for 384 resolution
     gradient_accumulation_steps = 4
     effective_batch_size = batch_size * gradient_accumulation_steps
     num_epochs = 50
@@ -196,22 +198,23 @@ def get_train_transforms(image_size):
         
         # Texture Augmentations (Helpful for WBC)
         A.OneOf([
-            A.GaussNoise(var_limit=(10.0, 50.0)),
-            A.GaussianBlur(blur_limit=(3, 7)),
-            A.MotionBlur(blur_limit=5),
+            A.GaussNoise(var_limit=(10.0, 50.0)), # simulates electronic noise
+            # simulates the microscopic being out-of-focus
+            A.GaussianBlur(blur_limit=(3, 7)), 
+            A.MotionBlur(blur_limit=5), 
             A.ISONoise(p=1.0),
         ], p=0.3),
         
         # Distortion
         A.OneOf([
-            A.OpticalDistortion(distort_limit=0.3),
+            A.OpticalDistortion(distort_limit=0.3), # Simulates lens curvature (fisheye effect).(warped / bent)
             A.GridDistortion(distort_limit=0.3),
             A.ElasticTransform(alpha=1, sigma=50, p=0.5),
         ], p=0.3),
         
         # Color
         A.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1, p=0.5),
-        
+        # randomly blacks out small squares in the image.
         A.CoarseDropout(max_holes=8, max_height=image_size//8, max_width=image_size//8, 
                         min_holes=1, fill_value=0, p=0.3),
         A.Normalize(mean=Config.mean, std=Config.std),
@@ -235,7 +238,9 @@ def get_tta_transforms(image_size):
             A.Resize(image_size+image_size//2, image_size+image_size//2), 
             A.RandomScale(scale_limit=0.2, p=1.0), 
             A.CenterCrop(height=image_size, width=image_size, p=1.0),
-            A.Normalize(mean=Config.mean, std=Config.std), ToTensorV2()]
+            A.Normalize(mean=Config.mean, std=Config.std), 
+            ToTensorV2()
+        ]
     return [
         A.Compose(base),                                        # Original
         A.Compose([A.HorizontalFlip(p=1.0)] + base),           # HFlip
@@ -311,13 +316,13 @@ class LDAMLoss(nn.Module):
         batch_m = torch.matmul(self.m_list[None, :], index_float.transpose(0, 1))
         batch_m = batch_m.view((-1, 1))
         x_m = x - batch_m
-    
+
         output = torch.where(index, x_m, x)
         
         if target.dim() > 1:
              # Soft Label LDAM
              return torch.sum(-target * F.log_softmax(output * self.s, dim=-1), dim=-1).mean()
-             
+           
         return F.cross_entropy(output * self.s, target, weight=self.weight)
 
 # --------------------------
@@ -448,6 +453,7 @@ class WBCClassifier(nn.Module):
         self.hidden_size = hidden_size
         
         # --- 2. Pooling & Heads ---
+        # generalised mean pooling parameter
         self.gem_p = nn.Parameter(torch.ones(1) * 3.0)
         self.dropouts = nn.ModuleList([nn.Dropout(dropout) for _ in range(5)])
         

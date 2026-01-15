@@ -1,5 +1,5 @@
 dataset/
-wbc_env/
+wbc_enb/
 __pycache__/
 logs/
 *.pyc
@@ -8,3 +8,5 @@ logs/
 *.h5
 .vscode/
 .ipynb_checkpoints/
+models/
+test.py
