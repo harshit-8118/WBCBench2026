@@ -1,5 +1,5 @@
 dataset/
-wbc_enb/
+wbc_env/
 __pycache__/
 logs/
 *.pyc
@@ -10,3 +10,15 @@ logs/
 .ipynb_checkpoints/
 models/
 test.py
+checkpoints*/
+*.pt
+*.ckpt
+*.pth
+*.jpg
+*.csv
+*.yaml
+runs/
+datasets/
+archived*
+*.json
+*.npz
