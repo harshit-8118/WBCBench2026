@@ -116,9 +116,9 @@ class Config:
     use_cls_token = True
     
     # Image Size
-    image_size = 560  
+    image_size = 224  
     
-    batch_size = 4 # Adjusted for 384 resolution
+    batch_size = 8 # Adjusted for 384 resolution
     gradient_accumulation_steps = 4
     effective_batch_size = batch_size * gradient_accumulation_steps
     num_epochs = 50
@@ -328,7 +328,7 @@ class LDAMLoss(nn.Module):
 # --------------------------
 # 5. Dataset & MixUp
 # --------------------------
-class WBCDataset(Dataset):
+class WBCDataset(Dataset): 
     """Dataset with albumentations augmentations (Preserved)"""
     def __init__(self, csv_path, img_dir, class_to_idx, transform=None, is_test=False):
         self.df = pd.read_csv(csv_path)
@@ -744,7 +744,7 @@ def main():
                                                
         val_loss, val_bal, val_f1, val_probs, val_labels = validate(model, eval_loader, criterion, Config.device, epoch, Config)
         
-        print(f"Epoch {epoch+1} | Train F1: {train_f1:.4f} | Val F1: {val_f1:.4f} | Val BalAcc: {val_bal:.4f}")
+        print(f"Epoch {epoch+1} | Train F1: {train_f1:.4f} | Val F1: {val_f1:.4f} | Val BalAcc: {val_bal:.4f} | Train loss:{train_loss} | Val loss: {val_loss}")
         
         if val_f1 > best_f1:
             best_f1 = val_f1
@@ -761,7 +761,7 @@ def main():
                 'model': model.state_dict(),
                 'thresholds': best_thresholds,
                 'f1': best_f1
-            }, os.path.join(Config.save_dir, "best_model.pth"))
+            }, os.path.join(Config.save_dir, f"best_model_{epoch}.pth"))
             
     # 7. Final Prediction (TTA + Thresholds)
     print("\nPredicting with Best Model...")
